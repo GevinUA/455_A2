@@ -323,7 +323,7 @@ class GtpConnection:
         self.respond('Implement This for Assignment 2')
 
     def policy_moves_cmd(self, args):
-        self.respond(self.go_engine.policy_moves_random(
+        self.respond(self.go_engine.policy_moves(
             self.board, self.board.current_player))
 
     def policy_cmd(self, args):
@@ -331,7 +331,7 @@ class GtpConnection:
             self.go_engine.policy = "random"
             self.respond()
         elif args[0] == "pattern":
-            self.go_engine.policy = "random"
+            self.go_engine.policy = "pattern"
             self.respond()
         else:
             self.respond("wrong arguments")

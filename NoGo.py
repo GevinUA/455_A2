@@ -10,6 +10,7 @@ from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS
 import sys
 from pattern_util import PatternUtil
 from ucb import runUcb
+import linecache
 
 
 MAXSIZE = 25
@@ -50,6 +51,7 @@ class Go0:
             opp = GoBoardUtil.opponent(toplay)
             return self.playGame(cboard, opp)
         else:
+            # TODO
             return self.pattern_simulation(state, move, toplay)
 
     def playGame(self, board, color):
@@ -84,11 +86,12 @@ class Go0:
         Run one-ply MC simulations to get a move to play.
         """
         cboard = board.copy()
-        emptyPoints = board.get_empty_points()
-        moves = []
-        for p in emptyPoints:
-            if board.is_legal(p, color):
-                moves.append(p)
+        # emptyPoints = board.get_empty_points()
+        # moves = []
+        # for p in emptyPoints:
+        #     if board.is_legal(p, color):
+        #         moves.append(p)
+        moves = GoBoardUtil.generate_legal_moves(board, color)
         if not moves:
             return None
         if self.use_ucb:
@@ -109,13 +112,20 @@ class Go0:
             # return testReturn
             return select_best_move(board, moves, moveWins)
 
+    def policy_moves(self, board, color):
+        if self.policy == "random":
+            return self.policy_moves_random(board, color)
+        else:
+            return self.policy_moves_pattern(board, color)
+
     def policy_moves_random(self, board, color):
-        emptyPoints = board.get_empty_points()
-        moves = []
+        # emptyPoints = board.get_empty_points()
+        # moves = []
         return_list = []
-        for p in emptyPoints:
-            if board.is_legal(p, color):
-                moves.append(p)
+        # for p in emptyPoints:
+        #     if board.is_legal(p, color):
+        #         moves.append(p)
+        moves = GoBoardUtil.generate_legal_moves(board, color)
         if not moves:
             return None
 
@@ -130,6 +140,35 @@ class Go0:
         for i in range(len(return_list)):
             return_string += str(floating)+" "
         return return_string
+
+    def policy_moves_pattern(self, board, color):
+        coord_list = []
+        weight_line_number = []
+        moves = GoBoardUtil.generate_legal_moves(board, color)
+        if not moves:
+            return None
+
+        for move in moves:
+            weight_index = PatternUtil.find_weight_index(board, move)
+            weight_line_number.append(weight_index + 1)
+            coord_list.append(format_point(point_to_coord(move, board.size)))
+
+        weights = []
+        for i in weight_line_number:
+            x = linecache.getline(r"weights.txt", i).strip()
+            weights.append(float(x.split(' ')[1]))
+
+        weight_sum = sum(weights)
+        probability_list = [round(x / weight_sum, 3) for x in weights]
+
+        coord_str = ''
+        prob_str = ''
+        zipped_result = sorted(zip(coord_list, probability_list))
+        for coord, prob in zipped_result:
+            coord_str = coord_str + coord + ' '
+            prob_str = prob_str + str(prob) + ' '
+        result_str = coord_str + prob_str
+        return result_str
 
     # def get_move(self, board, color):
     #     return GoBoardUtil.generate_random_move(board, color,
