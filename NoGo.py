@@ -6,7 +6,7 @@ import numpy as np
 from gtp_connection import GtpConnection
 from board_util import GoBoardUtil
 from board import GoBoard
-from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS
+from board_util import GoBoardUtil, BLACK, WHITE, EMPTY, BORDER, PASS, coord_to_point
 import sys
 from pattern_util import PatternUtil
 from ucb import runUcb
@@ -44,15 +44,22 @@ class Go0:
                 winRound += 1
         return winRound
 
+    # TODO: delete this block, just saving original version of simulate function
+    # def simulate(self, state, move, toplay):
+    #     if self.policy == 'random':
+    #         cboard = state.copy()
+    #         cboard.play_move(move, toplay)
+    #         opp = GoBoardUtil.opponent(toplay)
+    #         return self.playGame(cboard, opp)
+    #     else:
+    #         # TODO
+    #         return self.pattern_simulation(state, move, toplay)
+
     def simulate(self, state, move, toplay):
-        if self.policy == 'random':
-            cboard = state.copy()
-            cboard.play_move(move, toplay)
-            opp = GoBoardUtil.opponent(toplay)
-            return self.playGame(cboard, opp)
-        else:
-            # TODO
-            return self.pattern_simulation(state, move, toplay)
+        cboard = state.copy()
+        cboard.play_move(move, toplay)
+        opp = GoBoardUtil.opponent(toplay)
+        return self.playGame(cboard, opp)
 
     def playGame(self, board, color):
         """
@@ -61,12 +68,22 @@ class Go0:
         nuPasses = 0
         for _ in range(self.limit):
             color = board.current_player
-            # if self.random_simulation:
-            move = GoBoardUtil.generate_random_move(board, color, True)
-            # else:
-            #     move = PatternUtil.generate_move_with_filter(
-            #         board, self.use_pattern, check_selfatari
-            #     )
+            if self.policy == "random":
+                move = GoBoardUtil.generate_random_move(board, color, True)
+            else:
+                values_str = self.policy_moves_pattern(board, color)
+                if values_str is None:
+                    move = PASS
+                else:
+                    coord_prob = values_str.split(' ')
+                    size = len(coord_prob) // 2
+                    coord = coord_prob[:size]
+                    prob_str = coord_prob[size:]
+                    prob_v = [float(x) for x in prob_str]
+                    indices = [index for index, item in enumerate(prob_v) if item == max(prob_v)]
+                    move = coord[indices[0]]
+                    row, column = move_to_coord(move, board.size)
+                    move = coord_to_point(row, column, board.size)
             board.play_move(move, color)
             if move == PASS:
                 nuPasses += 1
@@ -168,7 +185,7 @@ class Go0:
             coord_str = coord_str + coord + ' '
             prob_str = prob_str + str(prob) + ' '
         result_str = coord_str + prob_str
-        return result_str
+        return result_str[:-1]
 
     # def get_move(self, board, color):
     #     return GoBoardUtil.generate_random_move(board, color,
